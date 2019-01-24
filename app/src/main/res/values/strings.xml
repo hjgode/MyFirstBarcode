@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">My First Barcode</string>
+    <string name="scantext">Please press Scan button</string>
+</resources>
