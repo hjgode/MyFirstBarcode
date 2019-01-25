@@ -176,7 +176,10 @@ public class MainActivity extends AppCompatActivity  implements BarcodeReader.Ba
                 barcodeData = event.getBarcodeData();
                 String timestamp = event.getTimestamp();
                 // update UI to reflect the data
-                textView.setText(barcodeData + "\n" + timestamp);
+                textView.setText("Data: "+barcodeData + "\nTime: " + timestamp +
+                        "\nAimID: " + event.getAimId()
+                        + "CodeID: \n" + event.getCodeId() +
+                        "\ndata: "+ strToHexString(event.getBarcodeData()));
             }
         });
     }
@@ -203,4 +206,31 @@ public class MainActivity extends AppCompatActivity  implements BarcodeReader.Ba
             startScan(false);
     }
 
+    String strToHexString(String s){
+        StringBuilder sb= new StringBuilder();
+        for (int i = 0; i < s.length(); i++) {
+            if( (int)s.charAt(i) < 32){
+                sb.append("["+ Integer.toHexString ((int)s.charAt(i))+"]");
+            }
+            else{
+                sb.append(s.charAt(i));
+            }
+        }
+        return sb.toString();
+    }
+
+    private String bytesToHexString(byte[] arr) {
+        String s = "[]";
+        if (arr != null) {
+            s = "[";
+            for (int i = 0; i < arr.length; i++) {
+                if(arr[i]<32)
+                    s += "0x" + Integer.toHexString(arr[i]) + ", ";
+                else
+                    s+=(char) (arr[i] & 0xFF)+", ";
+            }
+            s = s.substring(0, s.length() - 2) + "]";
+        }
+        return s;
+    }
 }
