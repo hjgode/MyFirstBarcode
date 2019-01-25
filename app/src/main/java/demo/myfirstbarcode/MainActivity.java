@@ -8,6 +8,9 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.Checkable;
+import android.widget.CompoundButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -22,34 +25,57 @@ public class MainActivity extends AppCompatActivity  implements BarcodeReader.Ba
     private Context context=this;
     TextView textView;
     Button buttonScan;
+    CheckBox checkbox;
+
     String TAG="MyFirstBarcode";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        Log.i(TAG, "Starting ...");
+        Log.i(TAG, "onCreate ...");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
         textView=(TextView)findViewById(R.id.textView2);
         buttonScan=(Button)findViewById(R.id.btnScan);
+        checkbox=(CheckBox)findViewById(R.id.checkBox);
+        checkbox.setOnClickListener(new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View view) {
+                                            if(reader!=null){
+                                                boolean bIsChecked=checkbox.isChecked();
+                                                String sIsChecked="";
+                                                if(bIsChecked)
+                                                    sIsChecked="True";
+                                                else
+                                                    sIsChecked="fAlSe";
+                                                try {
+                                                    // DEC_EAN13_CHECK_DIGIT_TRANSMIT
+                                                    reader.setProperty("DEC_EAN13_CHECK_DIGIT_TRANSMIT", bIsChecked);
+                                                }
+                                                catch (Exception ex){
+                                                    Log.e(TAG, "checkbox.setOnClickListener Exception: " +ex.getMessage());
+                                                }
+                                            }
+                                        }
+                                    });
 
-        buttonScan.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if(reader!=null){
-                    startScan(true);
-                    // see https://stackoverflow.com/questions/3072173/how-to-call-a-method-after-a-delay-in-android
-                    final Handler handler = new Handler();
-                    handler.postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            //Do something after 100ms
-                            startScan(false);
+                buttonScan.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        if (reader != null) {
+                            startScan(true);
+                            // see https://stackoverflow.com/questions/3072173/how-to-call-a-method-after-a-delay-in-android
+                            final Handler handler = new Handler();
+                            handler.postDelayed(new Runnable() {
+                                @Override
+                                public void run() {
+                                    //Do something after 100ms
+                                    startScan(false);
+                                }
+                            }, 5000);
                         }
-                    }, 5000);
-                }
-            }
-        });
+                    }
+                });
 
         // create the AidcManager providing a Context and an
         // CreatedCallback implementation.
@@ -62,12 +88,14 @@ public class MainActivity extends AppCompatActivity  implements BarcodeReader.Ba
                 // associated with the internal imager.
                 reader = manager.createBarcodeReader("dcs.scanner.imager");
 
+//  copied to onResume, which is not called after onCreate
                 try {
                     reader.claim();
                 } catch (ScannerUnavailableException e) {
                     e.printStackTrace();
                     Toast.makeText(context, "Scanner unavailable", Toast.LENGTH_SHORT).show();
                 }
+
 
                 try {
                     // apply settings
@@ -77,6 +105,10 @@ public class MainActivity extends AppCompatActivity  implements BarcodeReader.Ba
                     // set the trigger mode to automatic control
                     reader.setProperty(BarcodeReader.PROPERTY_TRIGGER_CONTROL_MODE,
                             BarcodeReader.TRIGGER_CONTROL_MODE_CLIENT_CONTROL);
+
+                    //update checkbox
+                    boolean bCheckDigit = reader.getBooleanProperty("DEC_EAN13_CHECK_DIGIT_TRANSMIT");
+                    checkbox.setChecked(bCheckDigit);
 
                 } catch (UnsupportedPropertyException e) {
                     Toast.makeText(MainActivity.this, "Failed to apply properties",
@@ -92,6 +124,30 @@ public class MainActivity extends AppCompatActivity  implements BarcodeReader.Ba
 
     }//onCreate
 
+    @Override
+    public void onResume(){
+        Log.i(TAG, "onResume ...");
+        super.onResume();
+        // put your code here...
+        try {
+            if(reader!=null) {
+                reader.claim();
+            }
+        } catch (ScannerUnavailableException e) {
+            e.printStackTrace();
+            Toast.makeText(context, "Scanner unavailable", Toast.LENGTH_SHORT).show();
+        }
+
+    }
+
+    @Override
+    public void onPause(){
+        Log.i(TAG, "onPause ...");
+        super.onPause();
+        if(reader!=null)
+            reader.release();
+    }
+
     void startScan(boolean triggerState){
             try{
                 reader.aim(triggerState);
@@ -106,11 +162,13 @@ public class MainActivity extends AppCompatActivity  implements BarcodeReader.Ba
                 Toast.makeText(MainActivity.this, "Scanner unavailable",
                         Toast.LENGTH_SHORT).show();
             }
-        
+
     }
+
 
     @Override
     public void onBarcodeEvent(final BarcodeReadEvent event) {
+        Log.i(TAG, "onBarcodeEvent ...");
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -125,6 +183,7 @@ public class MainActivity extends AppCompatActivity  implements BarcodeReader.Ba
 
     @Override
     public void onFailureEvent(final BarcodeFailureEvent event) {
+        Log.i(TAG, "onFailureEvent ...");
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -137,6 +196,7 @@ public class MainActivity extends AppCompatActivity  implements BarcodeReader.Ba
 
     @Override
     public void onTriggerEvent(TriggerStateChangeEvent event) {
+        Log.i(TAG, "onTriggerEvent ...");
         if(event.getState())
             startScan(true);
         else
